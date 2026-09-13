@@ -1494,7 +1494,6 @@ const app = {
         const tabMap = { 'Dashboard': 'dashboardTab', 'Register': 'registerTab', 'Holidays': 'holidaysTab', 'Config': 'configTab', 'Completed': 'completedTab', 'Bin': 'binTab' };
         const titles = { 'Dashboard': 'Overview', 'Register': 'Tasks', 'Holidays': 'Bank Holidays', 'Config': 'Configuration', 'Completed': 'Done', 'Bin': 'Bin' };
 
-        if (tab === 'Dashboard') this._countUp = true;
         const screen = document.getElementById(tabMap[tab]);
         if (screen) {
             screen.classList.add('active');
@@ -2289,57 +2288,40 @@ const app = {
             .map(o => [o.label, o.n, o.raw]);
     },
 
-    dashHeroCard(cfg) {
-        const circ = 188.5;
-        const pct = cfg.total > 0 ? Math.min(100, Math.round((cfg.count / cfg.total) * 100)) : 0;
-        const dash = ((pct / 100) * circ).toFixed(1) + ' ' + circ;
-
+    dashTile(cfg) {
         return '' +
-            '<div class="motiv-card" data-action="dash-filter" data-ftype="' + this.escAttr(cfg.ftype) + '"' +
+            '<button type="button" class="stat-tile" style="--tint:' + cfg.colour + '"' +
+            ' data-action="dash-filter" data-ftype="' + this.escAttr(cfg.ftype) + '"' +
             ' data-fvalue="' + this.escAttr(cfg.fvalue) + '" title="Show these in Tasks">' +
-            '<div class="motiv-icon" style="color:' + cfg.colour + ';">' + cfg.icon + '</div>' +
-            '<div class="motiv-title">' + this.sanitize(cfg.title) + '</div>' +
-            '<div class="motiv-circle-wrap">' +
-            '<svg viewBox="0 0 70 70" aria-hidden="true">' +
-            '<circle cx="35" cy="35" r="30" fill="none" style="stroke:var(--fill-2);" stroke-width="7"></circle>' +
-            '<circle class="dash-ring" cx="35" cy="35" r="30" fill="none" stroke-width="7" stroke-linecap="round"' +
-            ' style="stroke:' + cfg.colour + '; stroke-dasharray:0 ' + circ + ';" data-dash="' + dash + '"></circle>' +
-            '</svg>' +
-            '<div class="motiv-pct">' + cfg.count + '</div>' +
-            '</div>' +
-            '<div class="motiv-count">' + this.sanitize(cfg.sub) + '</div>' +
-            '</div>';
+            '<span class="stat-num">' + cfg.count + '</span>' +
+            '<span class="stat-label">' + this.sanitize(cfg.title) + '</span>' +
+            '<span class="stat-sub">' + this.sanitize(cfg.sub) + '</span>' +
+            '</button>';
     },
 
-    dashChartCard(cfg) {
-        const head = '<div class="motiv-chart-header"><h3>' + this.sanitize(cfg.title) + '</h3>' +
-            '<div class="motiv-tabs"><span class="active">' + cfg.total + ' open</span></div></div>';
+    dashSection(cfg) {
+        const head = '<h3>' + this.sanitize(cfg.title) +
+            (cfg.rows.length ? '<b>' + cfg.total + ' open</b>' : '') + '</h3>';
 
         if (!cfg.rows.length) {
-            return '<div class="motiv-chart-card">' + head +
-                '<div class="empty-state dash-empty"><strong>Nothing here yet</strong><span>' +
-                this.sanitize(cfg.empty) + '</span></div></div>';
+            return '<section class="dash-section">' + head +
+                '<div class="dash-none">' + this.sanitize(cfg.empty) + '</div></section>';
         }
 
-        const max = cfg.rows.reduce((m, r) => Math.max(m, r[1]), 0);
-        const body = cfg.rows.slice(0, 8).map((r, i) => {
+        const tiles = cfg.rows.map((r, i) => {
             const colour = cfg.colourFor ? cfg.colourFor(r[0], i) : this.DASH_PALETTE[i % this.DASH_PALETTE.length];
-            const width = max > 0 ? Math.max(4, Math.round((r[1] / max) * 100)) : 0;
             const clickable = r[2] !== '';
             const attrs = clickable
                 ? ' data-action="dash-filter" data-ftype="' + this.escAttr(cfg.ftype) + '" data-fvalue="' + this.escAttr(r[2]) + '"'
                 : '';
-            return '<div class="motiv-bar-row' + (clickable ? '' : ' is-static') + '"' + attrs + '>' +
-                '<div class="motiv-bar-info"><span>' + this.sanitize(r[0]) + '</span>' +
-                '<span class="motiv-bar-val">' + r[1] + '</span></div>' +
-                '<div class="motiv-bar-track"><div class="motiv-bar-fill" data-w="' + width + '" style="background:' + colour + ';"></div></div>' +
-                '</div>';
+            return '<button type="button" class="mini-tile' + (clickable ? '' : ' is-static') + '"' +
+                ' style="--tint:' + colour + '"' + attrs + ' title="' + this.escAttr(r[0]) + '">' +
+                '<span class="mini-name">' + this.sanitize(r[0]) + '</span>' +
+                '<span class="mini-num">' + r[1] + '</span>' +
+                '</button>';
         }).join('');
 
-        const more = cfg.rows.length > 8
-            ? '<div class="dash-more">+ ' + (cfg.rows.length - 8) + ' more</div>' : '';
-
-        return '<div class="motiv-chart-card">' + head + '<div class="motiv-chart-body">' + body + '</div>' + more + '</div>';
+        return '<section class="dash-section">' + head + '<div class="mini-grid">' + tiles + '</div></section>';
     },
 
     renderDashboard() {
@@ -2388,63 +2370,55 @@ const app = {
         }
 
         /* ---- due-date cards ---- */
-        const denom = open.length || 1;
         heroBox.innerHTML = [
-            this.dashHeroCard({
-                title: 'Due Today', count: dueToday.length, total: denom, colour: 'var(--blue)',
-                icon: '📅', ftype: 'due', fvalue: 'Today',
-                sub: dueToday.length ? 'On the clock' : 'Nothing due today'
+            this.dashTile({
+                title: 'Due Today', count: dueToday.length, colour: 'var(--blue)',
+                ftype: 'due', fvalue: 'Today',
+                sub: dueToday.length ? 'On the clock' : 'Nothing due'
             }),
-            this.dashHeroCard({
-                title: 'Overdue', count: overdue.length, total: denom, colour: 'var(--red)',
-                icon: '⚠️', ftype: 'due', fvalue: 'Overdue',
+            this.dashTile({
+                title: 'Overdue', count: overdue.length, colour: 'var(--red)',
+                ftype: 'due', fvalue: 'Overdue',
                 sub: overdue.length ? 'Needs attention' : 'All clear'
             }),
-            this.dashHeroCard({
-                title: 'Next 7 Days', count: next7.length, total: denom, colour: 'var(--amber)',
-                icon: '🗓️', ftype: 'due', fvalue: 'Next7Days',
+            this.dashTile({
+                title: 'Next 7 Days', count: next7.length, colour: 'var(--amber)',
+                ftype: 'due', fvalue: 'Next7Days',
                 sub: next7.length ? 'Coming up' : 'Week is clear'
             }),
-            this.dashHeroCard({
-                title: 'No Due Date', count: noDue.length, total: denom, colour: 'var(--slate)',
-                icon: '🕓', ftype: 'due', fvalue: 'NoDue',
-                sub: noDue.length ? 'Needs a deadline' : 'Everything dated'
+            this.dashTile({
+                title: 'No Due Date', count: noDue.length, colour: 'var(--slate)',
+                ftype: 'due', fvalue: 'NoDue',
+                sub: noDue.length ? 'Needs a deadline' : 'All dated'
             })
         ].join('');
 
-        /* ---- breakdown charts ---- */
+        /* ---- breakdowns, as small tiles ---- */
         const total = open.length;
         chartBox.innerHTML = [
-            this.dashChartCard({
+            this.dashSection({
                 title: 'By Category', ftype: 'category', total: total,
                 rows: this.dashGroup(open, 'category', 'Uncategorised'),
-                empty: 'Tag your entries with a category to see the split here.'
+                empty: 'Nothing open to break down.'
             }),
-            this.dashChartCard({
+            this.dashSection({
                 title: 'By Status', ftype: 'status', total: total,
                 rows: this.dashGroup(open, 'status', 'No status', this.lists.statuses),
                 colourFor: (name) => this.dashStatusColour(name),
                 empty: 'Nothing open to break down.'
             }),
-            this.dashChartCard({
+            this.dashSection({
                 title: 'By Priority', ftype: 'priority', total: total,
                 rows: this.dashGroup(open, 'priority', 'No priority', this.lists.priorities),
                 colourFor: (name) => this.dashPriorityColour(name),
                 empty: 'Nothing open to break down.'
             }),
-            this.dashChartCard({
+            this.dashSection({
                 title: 'Pending Assignments', ftype: 'pending', total: total,
                 rows: this.dashGroup(open, 'pendingWith', 'Unassigned'),
-                empty: 'Set "Pending With" on your entries to see who owes what.'
+                empty: 'Set "Pending With" to see who owes what.'
             })
         ].join('');
-
-        /* ---- let the rings and bars grow in ---- */
-        requestAnimationFrame(() => {
-            heroBox.querySelectorAll('.dash-ring').forEach(c => { c.style.strokeDasharray = c.dataset.dash; });
-            chartBox.querySelectorAll('.motiv-bar-fill').forEach(b => { b.style.width = b.dataset.w + '%'; });
-        });
-        this._countUp = false;
     },
 
     filterFromDashboard(ftype, fvalue) {
