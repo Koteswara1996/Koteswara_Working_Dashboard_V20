@@ -2,7 +2,7 @@
    Bump CACHE_VERSION whenever you change index.html, or phones will
    keep serving the old copy. */
 
-const CACHE_VERSION = 'btw-v31';
+const CACHE_VERSION = 'btw-v32';
 const SHELL = [
   './',
   './index.html',

@@ -156,20 +156,25 @@ const app = {
         }, wait);
     },
 
+    THEMES: {
+        pearl:  '#f2f2f7',
+        glass:  '#bfc9f5',
+        neuo:   '#e6ebf2',
+        clay:   '#e7ecff',
+        hero3d: '#10142a'
+    },
+
     applyTheme(mode) {
-        // Defaults to the pure light 'pearl' theme
-        const pick = mode || localStorage.getItem(this.THEME_KEY) || 'pearl';
+        // Defaults to the pure light 'pearl' theme. Anything unrecognised —
+        // including a theme saved before this build — falls back to it.
+        let pick = mode || localStorage.getItem(this.THEME_KEY) || 'pearl';
+        if (!Object.prototype.hasOwnProperty.call(this.THEMES, pick)) pick = 'pearl';
+
         localStorage.setItem(this.THEME_KEY, pick);
         document.documentElement.setAttribute('data-theme', pick);
 
         const meta = document.querySelector('meta[name="theme-color"]');
-        if (meta) {
-            if (pick === 'glacier') meta.setAttribute('content', '#f0f9ff');
-            else if (pick === 'sakura') meta.setAttribute('content', '#fff1f2');
-            else if (pick === 'mint') meta.setAttribute('content', '#f0fdf4');
-            else if (pick === 'lavender') meta.setAttribute('content', '#f5f3ff');
-            else meta.setAttribute('content', '#f2f2f7'); // Pearl
-        }
+        if (meta) meta.setAttribute('content', this.THEMES[pick]);
 
         document.querySelectorAll('.theme-btn').forEach(b => {
             b.classList.toggle('on', b.dataset.theme === pick);

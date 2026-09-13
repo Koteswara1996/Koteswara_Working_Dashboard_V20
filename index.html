@@ -59,105 +59,178 @@
             --slate: #8e8e93; color-scheme: light;
         }
 
-        /* ── THEME 2: Glacier (Blue tint) ──────────────────────── */
-        html[data-theme="glacier"] {
-            --canvas-bg: linear-gradient(145deg, #dceeff 0%, #cce4f8 40%, #d8eeff 100%);
-            --canvas-solid: #d4e8f8;
-            --glass-bg:        rgba(235, 248, 255, 0.62);
-            --glass-bg-hover:  rgba(245, 252, 255, 0.82);
-            --glass-header-bg: rgba(220, 240, 255, 0.78);
-            --glass-th-bg:     rgba(232, 246, 255, 0.92);
-            --glass-modal-bg:  rgba(240, 250, 255, 0.72);
-            --glass-border:    rgba(180, 220, 255, 0.55);
-            --glass-border-subtle: rgba(180, 220, 255, 0.40);
-            --glass-specular:  rgba(255, 255, 255, 0.75);
-            --glass-shadow:    0 8px 40px rgba(14,165,233,0.10), 0 2px 8px rgba(14,165,233,0.05);
-            --glass-shadow-sm: 0 4px 20px rgba(14,165,233,0.07);
-            --glass-inset:     inset 0 1px 0 rgba(255,255,255,0.75);
-            --label: #082f49; --label-2: #0284c7; --label-3: #7dd3fc;
-            --separator: rgba(14,165,233,0.12); --line: rgba(14,165,233,0.15); --line-strong: rgba(14,165,233,0.25);
-            --fill: rgba(14,165,233,0.07); --fill-2: rgba(14,165,233,0.13);
-            --input-bg: rgba(220,245,255,0.65);
-            --accent: #0284c7; --blue: #0284c7; --blue-ink: #0369a1;
-            --red: #ef4444; --red-ink: #b91c1c; --green: #10b981; --green-ink: #047857;
-            --amber: #f59e0b; --amber-ink: #b45309; --violet: #8b5cf6; --violet-ink: #6d28d9;
-            --slate: #0284c7; color-scheme: light;
+        /* ── THEME 2: Glassmorphism ────────────────────────────────
+           Frosted panes over a colourful backdrop. Heavier blur, more
+           transparency, bright hairline edges. */
+        html[data-theme="glass"] {
+            --canvas-bg: linear-gradient(135deg, #a8c8ff 0%, #c9b6ff 35%, #ffc2e8 70%, #a5f0e4 100%);
+            --canvas-solid: #bfc9f5;
+
+            --glass-bg:        rgba(255, 255, 255, 0.34);
+            --glass-bg-hover:  rgba(255, 255, 255, 0.52);
+            --glass-header-bg: rgba(255, 255, 255, 0.42);
+            --glass-th-bg:     rgba(255, 255, 255, 0.68);
+            --glass-modal-bg:  rgba(255, 255, 255, 0.46);
+            --glass-border:    rgba(255, 255, 255, 0.62);
+            --glass-border-subtle: rgba(255, 255, 255, 0.42);
+            --glass-specular:  rgba(255, 255, 255, 0.92);
+            --glass-shadow:    0 12px 44px rgba(49, 46, 129, 0.18), 0 2px 10px rgba(49, 46, 129, 0.08);
+            --glass-shadow-sm: 0 6px 22px rgba(49, 46, 129, 0.12);
+            --glass-inset:     inset 0 1px 0 rgba(255,255,255,0.95);
+
+            --label: #1e1b4b; --label-2: #4c469c; --label-3: #8b87c9;
+            --separator: rgba(49,46,129,0.14); --line: rgba(255,255,255,0.45); --line-strong: rgba(255,255,255,0.7);
+            --fill: rgba(255,255,255,0.26); --fill-2: rgba(255,255,255,0.42);
+            --input-bg: rgba(255,255,255,0.46);
+            --accent: #4f46e5; --blue: #2563eb; --blue-ink: #3730a3;
+            --red: #f43f5e; --red-ink: #9f1239; --green: #10b981; --green-ink: #065f46;
+            --amber: #f59e0b; --amber-ink: #92400e; --violet: #8b5cf6; --violet-ink: #5b21b6;
+            --slate: #4c469c; color-scheme: light;
+        }
+        html[data-theme="glass"] .motiv-card, html[data-theme="glass"] .appbar,
+        html[data-theme="glass"] .cfg-section, html[data-theme="glass"] .motiv-chart-card,
+        html[data-theme="glass"] .single-line-toolbar, html[data-theme="glass"] .tabbar,
+        html[data-theme="glass"] .modal-content, html[data-theme="glass"] .ms-options,
+        html[data-theme="glass"] .table-container, html[data-theme="glass"] .tcard {
+            backdrop-filter: saturate(200%) blur(40px) !important;
+            -webkit-backdrop-filter: saturate(200%) blur(40px) !important;
         }
 
-        /* ── THEME 3: Sakura (Rose tint) ───────────────────────── */
-        html[data-theme="sakura"] {
-            --canvas-bg: linear-gradient(145deg, #ffe4e8 0%, #ffd6dc 40%, #ffe4f0 100%);
-            --canvas-solid: #fddde2;
-            --glass-bg:        rgba(255, 240, 243, 0.62);
-            --glass-bg-hover:  rgba(255, 248, 250, 0.82);
-            --glass-header-bg: rgba(255, 232, 237, 0.78);
-            --glass-th-bg:     rgba(255, 240, 244, 0.92);
-            --glass-modal-bg:  rgba(255, 244, 246, 0.72);
-            --glass-border:    rgba(255, 160, 180, 0.45);
-            --glass-border-subtle: rgba(255, 160, 180, 0.32);
-            --glass-specular:  rgba(255, 255, 255, 0.75);
-            --glass-shadow:    0 8px 40px rgba(244,63,94,0.09), 0 2px 8px rgba(244,63,94,0.04);
-            --glass-shadow-sm: 0 4px 20px rgba(244,63,94,0.06);
-            --glass-inset:     inset 0 1px 0 rgba(255,255,255,0.75);
-            --label: #4c0519; --label-2: #e11d48; --label-3: #fda4af;
-            --separator: rgba(244,63,94,0.10); --line: rgba(244,63,94,0.14); --line-strong: rgba(244,63,94,0.22);
-            --fill: rgba(244,63,94,0.06); --fill-2: rgba(244,63,94,0.11);
-            --input-bg: rgba(255,240,244,0.65);
-            --accent: #e11d48; --blue: #0ea5e9; --blue-ink: #0284c7;
-            --red: #e11d48; --red-ink: #be123c; --green: #10b981; --green-ink: #047857;
-            --amber: #f59e0b; --amber-ink: #b45309; --violet: #8b5cf6; --violet-ink: #6d28d9;
-            --slate: #e11d48; color-scheme: light;
-        }
+        /* ── THEME 3: Neumorphism (Soft UI) ────────────────────────
+           One flat surface. Nothing floats, nothing is see-through —
+           shapes are pressed out of the background with paired shadows. */
+        html[data-theme="neuo"] {
+            --canvas-bg: linear-gradient(145deg, #e8edf4 0%, #e2e8f0 100%);
+            --canvas-solid: #e6ebf2;
 
-        /* ── THEME 4: Mint (Green tint) ────────────────────────── */
-        html[data-theme="mint"] {
-            --canvas-bg: linear-gradient(145deg, #d8f5e4 0%, #c8eed8 40%, #d4f5e0 100%);
-            --canvas-solid: #cceedb;
-            --glass-bg:        rgba(230, 250, 238, 0.62);
-            --glass-bg-hover:  rgba(242, 252, 246, 0.82);
-            --glass-header-bg: rgba(220, 248, 232, 0.78);
-            --glass-th-bg:     rgba(230, 250, 238, 0.92);
-            --glass-modal-bg:  rgba(238, 252, 244, 0.72);
-            --glass-border:    rgba(100, 210, 140, 0.42);
-            --glass-border-subtle: rgba(100, 210, 140, 0.30);
-            --glass-specular:  rgba(255, 255, 255, 0.75);
-            --glass-shadow:    0 8px 40px rgba(34,197,94,0.09), 0 2px 8px rgba(34,197,94,0.04);
-            --glass-shadow-sm: 0 4px 20px rgba(34,197,94,0.06);
-            --glass-inset:     inset 0 1px 0 rgba(255,255,255,0.75);
-            --label: #052e16; --label-2: #16a34a; --label-3: #86efac;
-            --separator: rgba(34,197,94,0.10); --line: rgba(34,197,94,0.14); --line-strong: rgba(34,197,94,0.22);
-            --fill: rgba(34,197,94,0.06); --fill-2: rgba(34,197,94,0.11);
-            --input-bg: rgba(220,250,234,0.65);
-            --accent: #16a34a; --blue: #0ea5e9; --blue-ink: #0284c7;
-            --red: #ef4444; --red-ink: #b91c1c; --green: #16a34a; --green-ink: #15803d;
-            --amber: #f59e0b; --amber-ink: #b45309; --violet: #8b5cf6; --violet-ink: #6d28d9;
-            --slate: #16a34a; color-scheme: light;
-        }
+            --glass-bg:        #e9eef5;
+            --glass-bg-hover:  #eef2f8;
+            --glass-header-bg: #e9eef5;
+            --glass-th-bg:     #e4eaf2;
+            --glass-modal-bg:  #e9eef5;
+            --glass-border:    transparent;
+            --glass-border-subtle: transparent;
+            --glass-specular:  transparent;
+            --glass-shadow:    8px 8px 18px rgba(163,177,198,0.55), -8px -8px 18px rgba(255,255,255,0.95);
+            --glass-shadow-sm: 5px 5px 12px rgba(163,177,198,0.45), -5px -5px 12px rgba(255,255,255,0.9);
+            --glass-inset:     inset 0 0 0 1px rgba(255,255,255,0.35);
 
-        /* ── THEME 5: Lavender (Purple tint) ───────────────────── */
-        html[data-theme="lavender"] {
-            --canvas-bg: linear-gradient(145deg, #ede8ff 0%, #e0d8ff 40%, #eee4ff 100%);
-            --canvas-solid: #e4dcff;
-            --glass-bg:        rgba(242, 238, 255, 0.62);
-            --glass-bg-hover:  rgba(248, 246, 255, 0.82);
-            --glass-header-bg: rgba(235, 228, 255, 0.78);
-            --glass-th-bg:     rgba(240, 236, 255, 0.92);
-            --glass-modal-bg:  rgba(245, 242, 255, 0.72);
-            --glass-border:    rgba(180, 150, 255, 0.40);
-            --glass-border-subtle: rgba(180, 150, 255, 0.28);
-            --glass-specular:  rgba(255, 255, 255, 0.75);
-            --glass-shadow:    0 8px 40px rgba(139,92,246,0.09), 0 2px 8px rgba(139,92,246,0.04);
-            --glass-shadow-sm: 0 4px 20px rgba(139,92,246,0.06);
-            --glass-inset:     inset 0 1px 0 rgba(255,255,255,0.75);
-            --label: #2e1065; --label-2: #7c3aed; --label-3: #c4b5fd;
-            --separator: rgba(139,92,246,0.10); --line: rgba(139,92,246,0.14); --line-strong: rgba(139,92,246,0.22);
-            --fill: rgba(139,92,246,0.06); --fill-2: rgba(139,92,246,0.11);
-            --input-bg: rgba(235,228,255,0.65);
-            --accent: #7c3aed; --blue: #0ea5e9; --blue-ink: #0284c7;
-            --red: #ef4444; --red-ink: #b91c1c; --green: #10b981; --green-ink: #047857;
-            --amber: #f59e0b; --amber-ink: #b45309; --violet: #7c3aed; --violet-ink: #6d28d9;
-            --slate: #7c3aed; color-scheme: light;
+            --label: #2d3a4e; --label-2: #7688a1; --label-3: #9dabbd;
+            --separator: rgba(163,177,198,0.35); --line: rgba(163,177,198,0.4); --line-strong: rgba(163,177,198,0.6);
+            --fill: rgba(163,177,198,0.16); --fill-2: rgba(163,177,198,0.3);
+            --input-bg: #e4eaf2;
+            --accent: #5b7cfa; --blue: #5b7cfa; --blue-ink: #3a55c9;
+            --red: #f4736b; --red-ink: #c0392b; --green: #4fc38a; --green-ink: #2a8259;
+            --amber: #f0a441; --amber-ink: #a9661a; --violet: #9b7ff0; --violet-ink: #6b4ec2;
+            --slate: #7688a1; color-scheme: light;
         }
+        /* Soft UI has no translucency, so the blur mixin has to stand down. */
+        html[data-theme="neuo"] .motiv-card, html[data-theme="neuo"] .appbar,
+        html[data-theme="neuo"] .cfg-section, html[data-theme="neuo"] .motiv-chart-card,
+        html[data-theme="neuo"] .single-line-toolbar, html[data-theme="neuo"] .tabbar,
+        html[data-theme="neuo"] .modal-content, html[data-theme="neuo"] .ms-options,
+        html[data-theme="neuo"] .table-container, html[data-theme="neuo"] .tcard {
+            backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+        }
+        html[data-theme="neuo"] .btn-icon,
+        html[data-theme="neuo"] .filter-input,
+        html[data-theme="neuo"] .filter-select,
+        html[data-theme="neuo"] .ms-header {
+            border: none;
+            box-shadow: 4px 4px 9px rgba(163,177,198,0.45), -4px -4px 9px rgba(255,255,255,0.92);
+        }
+        html[data-theme="neuo"] .btn-icon:active,
+        html[data-theme="neuo"] .filter-input:focus,
+        html[data-theme="neuo"] .filter-select:focus {
+            box-shadow: inset 4px 4px 9px rgba(163,177,198,0.5), inset -4px -4px 9px rgba(255,255,255,0.92);
+        }
+        html[data-theme="neuo"] td, html[data-theme="neuo"] th { background: transparent !important; }
+        html[data-theme="neuo"] tbody tr:hover td { background: rgba(255,255,255,0.45) !important; }
+
+        /* ── THEME 4: Claymorphism (Soft 3D) ───────────────────────
+           Fat rounded shapes with a puffy, moulded feel: a coloured
+           drop shadow underneath, two inner highlights on top. */
+        html[data-theme="clay"] {
+            --canvas-bg: linear-gradient(145deg, #e3e9ff 0%, #f0e6ff 45%, #dff0ff 100%);
+            --canvas-solid: #e7ecff;
+
+            --glass-bg:        rgba(255, 255, 255, 0.78);
+            --glass-bg-hover:  rgba(255, 255, 255, 0.92);
+            --glass-header-bg: rgba(255, 255, 255, 0.82);
+            --glass-th-bg:     rgba(250, 249, 255, 0.95);
+            --glass-modal-bg:  rgba(255, 255, 255, 0.86);
+            --glass-border:    rgba(255, 255, 255, 0.85);
+            --glass-border-subtle: rgba(255, 255, 255, 0.6);
+            --glass-specular:  rgba(255, 255, 255, 0.95);
+            --glass-shadow:    0 18px 34px rgba(109, 92, 214, 0.20), 0 6px 12px rgba(109, 92, 214, 0.12);
+            --glass-shadow-sm: 0 12px 24px rgba(109, 92, 214, 0.16);
+            --glass-inset:     inset 0 -8px 14px rgba(139, 92, 246, 0.14), inset 0 8px 12px rgba(255, 255, 255, 0.95);
+
+            --label: #312152; --label-2: #7a6aa8; --label-3: #b0a4d0;
+            --separator: rgba(109,92,214,0.14); --line: rgba(109,92,214,0.16); --line-strong: rgba(109,92,214,0.26);
+            --fill: rgba(139,92,246,0.08); --fill-2: rgba(139,92,246,0.16);
+            --input-bg: rgba(255,255,255,0.8);
+            --accent: #7c5cf0; --blue: #5b8def; --blue-ink: #3b5bc9;
+            --red: #fb7185; --red-ink: #be123c; --green: #4ade80; --green-ink: #15803d;
+            --amber: #fbbf24; --amber-ink: #b45309; --violet: #a78bfa; --violet-ink: #6d28d9;
+            --slate: #7a6aa8; color-scheme: light;
+        }
+        /* Clay is defined by how round it is. */
+        html[data-theme="clay"] .motiv-card,
+        html[data-theme="clay"] .motiv-chart-card,
+        html[data-theme="clay"] .cfg-section,
+        html[data-theme="clay"] .tcard,
+        html[data-theme="clay"] .table-container,
+        html[data-theme="clay"] .single-line-toolbar,
+        html[data-theme="clay"] .empty-state { border-radius: 32px; }
+        html[data-theme="clay"] .btn-icon,
+        html[data-theme="clay"] .filter-input,
+        html[data-theme="clay"] .filter-select,
+        html[data-theme="clay"] .ms-header,
+        html[data-theme="clay"] .btn-modal { border-radius: 18px; }
+        html[data-theme="clay"] .appbar-mark { border-radius: 16px; }
+
+        /* ── THEME 5: The 3D Hero Object ───────────────────────────
+           A dark stage so one lit object carries the screen: deep
+           backdrop, saturated accent, layered depth shadows. */
+        html[data-theme="hero3d"] {
+            --canvas-bg: radial-gradient(1100px 620px at 18% -8%, #3b2a7a 0%, transparent 58%),
+                         radial-gradient(950px 560px at 92% 8%, #0e5e6e 0%, transparent 55%),
+                         linear-gradient(160deg, #0d1020 0%, #141936 55%, #0a0d1c 100%);
+            --canvas-solid: #10142a;
+
+            --glass-bg:        rgba(36, 41, 74, 0.60);
+            --glass-bg-hover:  rgba(48, 54, 94, 0.78);
+            --glass-header-bg: rgba(20, 25, 52, 0.82);
+            --glass-th-bg:     rgba(26, 31, 60, 0.95);
+            --glass-modal-bg:  rgba(28, 33, 64, 0.86);
+            --glass-border:    rgba(148, 163, 255, 0.20);
+            --glass-border-subtle: rgba(148, 163, 255, 0.13);
+            --glass-specular:  rgba(190, 200, 255, 0.35);
+            --glass-shadow:    0 26px 60px rgba(0, 0, 0, 0.55), 0 8px 20px rgba(79, 70, 229, 0.28);
+            --glass-shadow-sm: 0 14px 34px rgba(0, 0, 0, 0.45);
+            --glass-inset:     inset 0 1px 0 rgba(190, 200, 255, 0.22);
+
+            --label: #eef1ff; --label-2: #a9b2e0; --label-3: #6f78a8;
+            --separator: rgba(148,163,255,0.16); --line: rgba(148,163,255,0.18); --line-strong: rgba(148,163,255,0.32);
+            --fill: rgba(148,163,255,0.11); --fill-2: rgba(148,163,255,0.20);
+            --input-bg: rgba(16, 20, 44, 0.72);
+            --accent: #818cf8; --blue: #60a5fa; --blue-ink: #bfdbfe;
+            --red: #fb7185; --red-ink: #fecdd3; --green: #34d399; --green-ink: #a7f3d0;
+            --amber: #fbbf24; --amber-ink: #fde68a; --violet: #c084fc; --violet-ink: #e9d5ff;
+            --slate: #8b95c9; color-scheme: dark;
+        }
+        /* The toast paints white-on-var(--label); invert it on the dark stage. */
+        html[data-theme="hero3d"] .toast { color: #0d1020; background: #dfe4ff; }
+        html[data-theme="hero3d"] .toast-action { color: #312e81; background: rgba(49,46,129,0.12); border-color: rgba(49,46,129,0.3); }
+        /* Lift the mark off the page so it reads as a real object. */
+        html[data-theme="hero3d"] .appbar-mark {
+            background: linear-gradient(150deg, #a5b4fc 0%, #6366f1 46%, #3730a3 100%);
+            box-shadow: 0 12px 26px rgba(67, 56, 202, 0.6),
+                        inset 0 2px 3px rgba(255,255,255,0.55),
+                        inset 0 -3px 6px rgba(30, 27, 75, 0.6);
+        }
+        html[data-theme="hero3d"] .boot-tile { filter: drop-shadow(0 22px 46px rgba(99, 102, 241, 0.55)); }
 
         /* ── GLOBAL BLUR MIXIN — every floating layer gets blur ── */
         .motiv-card, .appbar, .cfg-section, .motiv-chart-card,
@@ -1287,10 +1360,10 @@
             <div class="dash-title">Appearance (iOS Glass Themes)</div>
             <div class="theme-row">
                 <button class="theme-btn" data-theme="pearl" onclick="app.applyTheme('pearl')">⚪ Pearl</button>
-                <button class="theme-btn" data-theme="glacier" onclick="app.applyTheme('glacier')">🧊 Glacier</button>
-                <button class="theme-btn" data-theme="sakura" onclick="app.applyTheme('sakura')">🌸 Sakura</button>
-                <button class="theme-btn" data-theme="mint" onclick="app.applyTheme('mint')">🍃 Mint</button>
-                <button class="theme-btn" data-theme="lavender" onclick="app.applyTheme('lavender')">💜 Lavender</button>
+                <button class="theme-btn" data-theme="glass" onclick="app.applyTheme('glass')">🪩 Glassmorphism</button>
+                <button class="theme-btn" data-theme="neuo" onclick="app.applyTheme('neuo')">🧼 Neumorphism</button>
+                <button class="theme-btn" data-theme="clay" onclick="app.applyTheme('clay')">🏺 Claymorphism</button>
+                <button class="theme-btn" data-theme="hero3d" onclick="app.applyTheme('hero3d')">🔮 3D Hero</button>
             </div>
         </div>
 
