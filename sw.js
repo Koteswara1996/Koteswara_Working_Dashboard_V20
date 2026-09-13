@@ -2,7 +2,7 @@
    Bump CACHE_VERSION whenever you change index.html, or phones will
    keep serving the old copy. */
 
-const CACHE_VERSION = 'btw-v29';
+const CACHE_VERSION = 'btw-v31';
 const SHELL = [
   './',
   './index.html',
@@ -12,7 +12,8 @@ const SHELL = [
   './icon-512.png',
   './icon-maskable-512.png',
   './apple-touch-icon.png',
-  './favicon.png'
+  './favicon.png',
+  './favicon.svg'
 ];
 
 self.addEventListener('install', (event) => {

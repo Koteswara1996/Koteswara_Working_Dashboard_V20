@@ -47,9 +47,11 @@ const app = {
         edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>',
         done: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="20 6 9 17 4 12"></polyline></svg>',
         reopen: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><polyline points="3 3 3 8 8 8"></polyline></svg>',
-        bin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2-2v2"></path></svg>',
+        bin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>',
         restore: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="9 14 4 9 9 4"></polyline><path d="M20 20v-7a4 4 0 0 0-4-4H4"></path></svg>',
-        mail: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>'
+        mail: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>',
+        copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="9" y="9" width="12" height="12" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>',
+        copied: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="20 6 9 17 4 12"></polyline></svg>'
     },
 
     /* ---------- SMALL HELPERS ---------- */
@@ -94,10 +96,12 @@ const app = {
 
     formatTimeStr(timeStr) {
         if (!timeStr) return '';
-        let [hh, mm] = String(timeStr).split(':');
-        let ampm = hh >= 12 ? 'PM' : 'AM';
-        hh = hh % 12 || 12;
-        return `${hh}:${mm} ${ampm}`;
+        const parts = String(timeStr).split(':');
+        const h24 = Number(parts[0]);
+        if (!isFinite(h24)) return '';
+        const mm = String(parts[1] === undefined ? '00' : parts[1]).padStart(2, '0').slice(0, 2);
+        const ampm = h24 >= 12 ? 'PM' : 'AM';
+        return `${h24 % 12 || 12}:${mm} ${ampm}`;
     },
 
     getTaskDueDateTime(t) {
@@ -124,6 +128,7 @@ const app = {
         document.getElementById('tabBar').style.display = 'flex';
         
         this.initApp();
+        this.hideSplash();
 
         if (!(localStorage.getItem(CONFIG.SYNC_URL_KEY) || '').trim()) {
             setTimeout(() => this.showToast('Add your sheet link in Config → Cloud Sync', 'info'), 1400);
@@ -131,6 +136,25 @@ const app = {
     },
 
     THEME_KEY: 'pureEnergyTheme',
+
+    /* Boot splash: hold it just long enough for the mark to finish drawing,
+       then fade out and let the shell animate in behind it. */
+    BOOT_MIN_MS: 1350,
+
+    hideSplash() {
+        const el = document.getElementById('bootSplash');
+        if (!el || el.classList.contains('gone')) return;
+
+        const started = Number(window.__bootAt) || Date.now();
+        const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const wait = reduce ? 0 : Math.max(0, this.BOOT_MIN_MS - (Date.now() - started));
+
+        setTimeout(() => {
+            el.classList.add('gone');
+            document.body.classList.add('booted');
+            setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 700);
+        }, wait);
+    },
 
     applyTheme(mode) {
         // Defaults to the pure light 'pearl' theme
@@ -169,6 +193,9 @@ const app = {
     initApp() {
         this.loadLists();
         this.loadData();
+        this.purgeOldBin();
+        this.initViewMode();
+        this.initCardSwipe();
         this.detachDropdowns();
         this.populateDropdowns();
         this.initColumnResize();
@@ -873,11 +900,13 @@ const app = {
     },
 
     copyToClipboard(text, btnEl) {
+        if (!text) { this.showToast('Nothing to copy', 'info'); return; }
         navigator.clipboard.writeText(text).then(() => {
-            const original = btnEl.innerText;
-            btnEl.innerText = 'Copied';
+            if (!btnEl) { this.showToast('Copied', 'success'); return; }
+            const original = btnEl.innerHTML;
+            btnEl.innerHTML = this.SVGS.copied;
             btnEl.classList.add('done');
-            setTimeout(() => { btnEl.innerText = original; btnEl.classList.remove('done'); }, 1800);
+            setTimeout(() => { btnEl.innerHTML = original; btnEl.classList.remove('done'); }, 1600);
         }).catch(() => this.showToast('Could not copy', 'error'));
     },
 
@@ -1024,9 +1053,11 @@ const app = {
 
     saveData() {
         try {
-            localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(this.tasks));
+            const blob = JSON.stringify(this.tasks);
+            localStorage.setItem(CONFIG.STORAGE_KEY, blob);
+            this.checkStorageHeadroom(blob.length);
         } catch (e) {
-            this.showToast("Local storage full — export a CSV backup.", "error");
+            this.showToast("Local storage full — export a CSV backup and empty the Bin.", "error");
         }
         this.updateStats();
         if (this.currentTab === 'Dashboard') this.renderDashboard();
@@ -1393,8 +1424,18 @@ const app = {
         this.renderMultiSelect('filterStatusOpts', 'Statuses', union(this.lists.statuses, 'status'));
         this.renderMultiSelect('filterCategoryCompletedOpts', 'Categories', allCats);
 
-        document.getElementById('filterPending').innerHTML = '<option value="All">All Pending With</option>' + union(this.lists.pendingWith, 'pendingWith').map(opt).join('');
-        document.getElementById('dashGlobalCategory').innerHTML = '<option value="All">All Categories Overview</option>' + allCats.map(opt).join('');
+        // Rebuilding a <select> wipes its value, so remember and restore it —
+        // otherwise a background sync silently drops the filter you just set.
+        const keepValue = (elId, html) => {
+            const el = document.getElementById(elId);
+            if (!el) return;
+            const previous = el.value;
+            el.innerHTML = html;
+            if (previous && Array.from(el.options).some(o => o.value === previous)) el.value = previous;
+        };
+
+        keepValue('filterPending', '<option value="All">All Pending With</option>' + union(this.lists.pendingWith, 'pendingWith').map(opt).join(''));
+        keepValue('dashGlobalCategory', '<option value="All">All Categories Overview</option>' + allCats.map(opt).join(''));
     },
 
     setupEventListeners() {
@@ -1409,6 +1450,8 @@ const app = {
 
     clearFilters(silent = false) {
         document.getElementById('searchInput').value = '';
+        const doneSearch = document.getElementById('searchCompleted');
+        if (doneSearch) doneSearch.value = '';
         this.setMultiValue('filterCategoryOpts', 'All');
         this.setMultiValue('filterPriorityOpts', 'All');
         this.setMultiValue('filterStatusOpts', 'All');
@@ -1423,8 +1466,22 @@ const app = {
         if (silent !== true) this.showToast('Filters cleared', 'success');
     },
 
+    SORT_DEFAULTS: {
+        Register:  ['dueDate', true],
+        Completed: ['completedDate', false],
+        Bin:       ['dateDeleted', false]
+    },
+    _sortChosen: {},
+
     switchTab(tab) {
+        if (tab !== this.currentTab) this.exitSelectMode();
         this.currentTab = tab;
+
+        // Each tab opens on the sort that actually makes sense for it —
+        // Tasks by what is due next — until you pick your own for that tab.
+        const chosen = this._sortChosen[tab];
+        const preset = chosen || this.SORT_DEFAULTS[tab];
+        if (preset) { this.sortCol = preset[0]; this.sortAsc = preset[1]; }
 
         document.querySelectorAll('.content-area').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('.tabbar-btn').forEach(btn => btn.classList.remove('active'));
@@ -1524,6 +1581,7 @@ const app = {
     sortTable(col) {
         if (this.sortCol === col) this.sortAsc = !this.sortAsc;
         else { this.sortCol = col; this.sortAsc = true; }
+        this._sortChosen[this.currentTab] = [this.sortCol, this.sortAsc];
         this.renderTable();
     },
 
@@ -1672,17 +1730,19 @@ const app = {
             const idAttr = this.escAttr(t.id);
             row.dataset.recordId = t.id;
             row.dataset.recordMode = mode;
+            if (this.selectMode && this.isSelected(t.id)) row.classList.add('is-selected');
 
             const recBadge = (t.recurrence && t.recurrence !== 'None')
                 ? `<span class="rec-badge">${this.sanitize(t.recurrence)}</span>` : '';
 
             const mailChainHtml = t.mailChain ? `
                 <div class="mailchain">
-                    <span>${this.sanitize(t.mailChain)}</span>
-                    <button type="button" class="btn-copy" data-action="copy-mail" data-id="${idAttr}">Copy</button>
+                    <span title="${this.escAttr(t.mailChain)}">${this.sanitize(t.mailChain)}</span>
+                    <button type="button" class="btn-copy" data-action="copy-mail" data-id="${idAttr}"
+                            title="Copy reference" aria-label="Copy reference">${this.SVGS.copy}</button>
                 </div>` : '';
 
-            const descHtml = `<div>${this.sanitize(t.description)}${recBadge}</div>${mailChainHtml}`;
+            const descHtml = `<div class="task-line" title="${this.escAttr(t.description)}">${this.sanitize(t.description)}${recBadge}</div>${mailChainHtml}`;
             const viewMailBtn = t.emailId
                 ? `<button type="button" class="btn-icon go" data-action="open-mail" data-id="${idAttr}" title="Open Mail">${this.SVGS.mail}</button>` : '';
 
@@ -1702,12 +1762,12 @@ const app = {
                 const statusVal = (t.status || 'Pending').toString();
 
                 row.innerHTML = `
-                    <td>${logDate}</td>
+                    <td class="td-clip">${logDate}</td>
                     <td class="td-task">${descHtml}</td>
-                    <td>${this.sanitize(t.category || '-')}</td>
-                    <td><span class="dot-priority dot-${this.escAttr(priorityVal.replace(/\s+/g, '-'))}"></span>${this.sanitize(priorityVal || '-')}</td>
-                    <td><span class="status-pill ${this.escAttr(statusVal.replace(/\s+/g, '-'))}">${this.sanitize(statusVal)}</span></td>
-                    <td>${this.sanitize(t.pendingWith || '-')}</td>
+                    <td class="td-clip${t.category ? '' : ' td-empty'}" title="${this.escAttr(t.category || '')}">${this.sanitize(t.category || '—')}</td>
+                    <td class="td-clip"><span class="dot-priority dot-${this.escAttr(priorityVal.replace(/\s+/g, '-'))}"></span>${this.sanitize(priorityVal || '—')}</td>
+                    <td class="td-clip"><span class="status-pill ${this.escAttr(statusVal.replace(/\s+/g, '-'))}" title="${this.escAttr(statusVal)}">${this.sanitize(statusVal)}</span></td>
+                    <td class="td-clip${t.pendingWith ? '' : ' td-empty'}" title="${this.escAttr(t.pendingWith || '')}">${this.sanitize(t.pendingWith || '—')}</td>
                     <td class="due-text">${dueString}</td>
                     <td class="action-cell">
                         ${viewMailBtn}
@@ -1716,10 +1776,10 @@ const app = {
                     </td>`;
             } else if (mode === 'completed') {
                 row.innerHTML = `
-                    <td>${this.formatDateStr(t.dateLogged)}</td>
+                    <td class="td-clip">${this.formatDateStr(t.dateLogged, { day: 'numeric', month: 'short', year: 'numeric' })}</td>
                     <td class="td-task">${descHtml}</td>
-                    <td>${this.sanitize(t.category || '-')}</td>
-                    <td>${this.formatDateStr(t.completedDate || this.getLocalDateStr(new Date()))}</td>
+                    <td class="td-clip${t.category ? '' : ' td-empty'}" title="${this.escAttr(t.category || '')}">${this.sanitize(t.category || '—')}</td>
+                    <td class="td-clip">${this.formatDateStr(t.completedDate || this.getLocalDateStr(new Date()))}</td>
                     <td class="action-cell">
                         ${viewMailBtn}
                         <button type="button" class="btn-icon warn" data-action="reopen" data-id="${idAttr}" title="Reopen Task">${this.SVGS.reopen}</button>
@@ -1727,9 +1787,9 @@ const app = {
                     </td>`;
             } else {
                 row.innerHTML = `
-                    <td>${this.formatDateStr(t.dateDeleted || this.getLocalDateStr(new Date()))}</td>
+                    <td class="td-clip">${this.formatDateStr(t.dateDeleted || this.getLocalDateStr(new Date()))}</td>
                     <td class="td-task">${descHtml}</td>
-                    <td>${this.sanitize(t.category || '-')}</td>
+                    <td class="td-clip${t.category ? '' : ' td-empty'}" title="${this.escAttr(t.category || '')}">${this.sanitize(t.category || '—')}</td>
                     <td class="action-cell">
                         <button type="button" class="btn-icon ok" data-action="restore" data-id="${idAttr}" title="Restore Task">${this.SVGS.restore}</button>
                         <button type="button" class="btn-icon bad" data-action="hard-delete" data-id="${idAttr}" title="Delete Permanently">${this.SVGS.bin}</button>
@@ -1765,13 +1825,14 @@ const app = {
             card.className = 'tcard';
             card.dataset.recordId = t.id;
             card.dataset.recordMode = mode;
+            if (this.selectMode && this.isSelected(t.id)) card.classList.add('is-selected');
 
             const chips = [];
             if (t.priority) chips.push(`<span class="chip pri-${this.escAttr(String(t.priority).replace(/\s+/g, '-'))}">${this.sanitize(t.priority)}</span>`);
             if (t.category) chips.push(`<span class="chip cat">${this.sanitize(t.category)}</span>`);
             if (t.recurrence && t.recurrence !== 'None') chips.push(`<span class="chip rec">${this.sanitize(t.recurrence)}</span>`);
             if (t.pendingWith) chips.push(`<span class="chip person">${this.sanitize(t.pendingWith)}</span>`);
-            if (t.mailChain) chips.push(`<button type="button" class="chip mail" data-action="copy-mail" data-id="${idAttr}">📧 ${this.sanitize(t.mailChain)}</button>`);
+            if (t.mailChain) chips.push(`<button type="button" class="chip mail" data-action="copy-mail" data-id="${idAttr}" title="${this.escAttr(t.mailChain)}">${this.SVGS.copy}<span class="chip-txt">${this.sanitize(t.mailChain)}</span></button>`);
 
             const mailBtn = t.emailId
                 ? `<button type="button" class="btn-icon go" data-action="open-mail" data-id="${idAttr}" title="Open Mail">${this.SVGS.mail}</button>` : '';
@@ -1838,6 +1899,9 @@ const app = {
 
     /* ---------- WHOLE-RECORD TAP TO EDIT ---------- */
     handleRecordClick(e) {
+        // A swipe ends in a click event; don't open the editor on the way out.
+        if (this._swipeAt && Date.now() - this._swipeAt < 500) return;
+
         // Ignore anything that is already interactive in its own right.
         if (e.target.closest('a, button, input, textarea, select, label, .col-resize, .ms-options, .modal, #sortMenuPanel')) return;
 
@@ -1847,6 +1911,8 @@ const app = {
 
         const host = e.target.closest('tr[data-record-id], .tcard[data-record-id]');
         if (!host) return;
+
+        if (this.selectMode) { this.toggleSelect(host.dataset.recordId); return; }
 
         const mode = host.dataset.recordMode;
         if (mode === 'bin') {
@@ -1910,6 +1976,7 @@ const app = {
         }
 
         if (mailBtn) mailBtn.style.display = this.storedEmailId ? '' : 'none';
+        this.checkDueHoliday();
 
         modal.classList.add('open');
         setTimeout(() => { const d = document.getElementById('taskDescription'); if (d) d.focus(); }, 80);
@@ -1918,6 +1985,8 @@ const app = {
     closeTaskModal() {
         const modal = document.getElementById('taskModal');
         if (modal) modal.classList.remove('open');
+        const hint = document.getElementById('dueHolidayHint');
+        if (hint) { hint.style.display = 'none'; hint.innerHTML = ''; }
         const form = document.getElementById('taskForm');
         if (form) form.reset();
         this.editingId = null;
@@ -2047,8 +2116,23 @@ const app = {
         this.saveData();
         this.renderTable();
         this.processEngine();
-        this.showToast(repeat ? 'Done — next occurrence scheduled.' : 'Marked complete.', 'success');
+        this.showToast(
+            repeat ? 'Done — next occurrence scheduled.' : 'Marked complete.',
+            'success',
+            { label: 'Undo', onClick: () => this.undoComplete(id, repeat ? repeat.id : null) }
+        );
         this.syncToGoogleSheets();
+    },
+
+    undoComplete(id, spawnedId) {
+        if (spawnedId) {
+            const spawned = this.findTask(spawnedId);
+            // Only drop the auto-created occurrence if it is still untouched.
+            if (spawned && !spawned.completedDate && !spawned.deleted) {
+                this.tasks = this.tasks.filter(t => String(t.id) !== String(spawnedId));
+            }
+        }
+        this.reopenTask(id);
     },
 
     reopenTask(id) {
@@ -2081,7 +2165,7 @@ const app = {
 
         this.saveData();
         this.renderTable();
-        this.showToast('Moved to Bin.', 'success');
+        this.showToast('Moved to Bin.', 'success', { label: 'Undo', onClick: () => this.restoreTask(id) });
         this.syncToGoogleSheets();
     },
 
@@ -2390,12 +2474,282 @@ const app = {
         this.showToast((labels[ftype] || ftype) + ': ' + (pretty[fvalue] || fvalue), 'info');
     },
 
+
+    /* ---------- TABLE vs CARD VIEW (mobile and desktop together) ---------- */
+    VIEW_KEY: 'pureEnergyView',
+    viewMode: 'auto',
+
+    resolvedView() {
+        if (this.viewMode === 'cards' || this.viewMode === 'table') return this.viewMode;
+        const w = window.innerWidth || 1024;
+        // A phone with "Desktop site" switched on reports a ~980px viewport but
+        // still has a coarse pointer, so trust the pointer over the width.
+        const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+        if (w <= 768) return 'cards';
+        if (coarse && w <= 1100) return 'cards';
+        return 'table';
+    },
+
+    applyViewMode() {
+        const view = this.resolvedView();
+        if (document.body.dataset.view === view) return view;
+        document.body.dataset.view = view;
+        document.querySelectorAll('.view-toggle').forEach(btn => {
+            btn.textContent = view === 'cards' ? '\u25a6' : '\u2630';
+            btn.title = view === 'cards' ? 'Card view — tap for the table' : 'Table view — tap for cards';
+        });
+        return view;
+    },
+
+    toggleViewMode() {
+        this.viewMode = this.resolvedView() === 'cards' ? 'table' : 'cards';
+        localStorage.setItem(this.VIEW_KEY, this.viewMode);
+        this.applyViewMode();
+        this.renderTable();
+        this.showToast(this.viewMode === 'cards' ? 'Card view' : 'Table view', 'info');
+    },
+
+    initViewMode() {
+        const saved = localStorage.getItem(this.VIEW_KEY);
+        this.viewMode = (saved === 'cards' || saved === 'table') ? saved : 'auto';
+        this.applyViewMode();
+
+        let t = null;
+        window.addEventListener('resize', () => {
+            if (this.viewMode !== 'auto') return;
+            clearTimeout(t);
+            t = setTimeout(() => {
+                const before = document.body.dataset.view;
+                if (this.applyViewMode() !== before) this.renderTable();
+            }, 180);
+        });
+    },
+
+    /* ---------- SWIPE A CARD: RIGHT = DONE, LEFT = BIN ---------- */
+    initCardSwipe() {
+        let card = null, startX = 0, startY = 0, dx = 0, axis = null;
+
+        document.addEventListener('touchstart', (e) => {
+            if (e.touches.length !== 1) return;
+            const el = e.target.closest('.card-list .tcard[data-record-id]');
+            if (!el || el.dataset.recordMode !== 'register') return;
+            if (e.target.closest('button, a, input, select, textarea')) return;
+            card = el; startX = e.touches[0].clientX; startY = e.touches[0].clientY;
+            dx = 0; axis = null;
+            card.style.transition = 'none';
+        }, { passive: true });
+
+        document.addEventListener('touchmove', (e) => {
+            if (!card || e.touches.length !== 1) return;
+            dx = e.touches[0].clientX - startX;
+            const dy = e.touches[0].clientY - startY;
+
+            if (axis === null) {
+                if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
+                axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+            }
+            if (axis !== 'x') return;
+
+            this._swipeAt = Date.now();
+            const capped = Math.max(-150, Math.min(150, dx));
+            card.style.transform = 'translateX(' + capped + 'px)';
+            card.classList.toggle('swipe-done', capped > 62);
+            card.classList.toggle('swipe-bin', capped < -62);
+        }, { passive: true });
+
+        const release = () => {
+            if (!card) return;
+            const el = card, moved = dx, wasX = axis === 'x';
+            card = null; axis = null;
+
+            el.style.transition = '';
+            el.style.transform = '';
+            el.classList.remove('swipe-done', 'swipe-bin');
+            if (!wasX) return;
+
+            if (moved > 95) this.markComplete(el.dataset.recordId);
+            else if (moved < -95) this.softDelete(el.dataset.recordId);
+        };
+        document.addEventListener('touchend', release, { passive: true });
+        document.addEventListener('touchcancel', release, { passive: true });
+    },
+
+    /* ---------- BIN HOUSEKEEPING ---------- */
+    BIN_KEEP_DAYS: 30,
+
+    purgeOldBin() {
+        const cutoff = Date.now() - (this.BIN_KEEP_DAYS * 86400000);
+        let cleared = 0;
+
+        this.tasks.forEach(t => {
+            if (!t.deleted || t.purged || !t.dateDeleted) return;
+            const p = String(t.dateDeleted).split('-').map(Number);
+            if (p.length < 3 || !p[0] || !p[1] || !p[2]) return;
+            if (new Date(p[0], p[1] - 1, p[2]).getTime() >= cutoff) return;
+            t.purged = true;
+            t.updatedAt = Date.now();
+            cleared++;
+        });
+
+        if (cleared > 0) {
+            this.saveData();
+            this.showToast(cleared + ' bin ' + (cleared === 1 ? 'entry' : 'entries') +
+                ' older than ' + this.BIN_KEEP_DAYS + ' days cleared out.', 'info');
+        }
+        return cleared;
+    },
+
+    /* ---------- BANK-HOLIDAY AWARE DUE DATES ---------- */
+    holidayOn(dateStr) {
+        if (!dateStr) return null;
+        return this.holidays.find(h => h.date === dateStr) || null;
+    },
+
+    checkDueHoliday() {
+        const hint = document.getElementById('dueHolidayHint');
+        if (!hint) return;
+
+        const input = document.getElementById('taskDueDate');
+        const holiday = this.holidayOn(input ? input.value : '');
+
+        if (!holiday) { hint.style.display = 'none'; hint.innerHTML = ''; return; }
+
+        const next = holiday.nextWorkingDay;
+        hint.innerHTML = '<span>' + this.sanitize(holiday.name) + ' — banks are closed that day.</span>' +
+            (next ? '<button type="button" onclick="app.useNextWorkingDay(\'' + this.escAttr(next) +
+                '\')">Move to ' + this.formatDateStr(next, { day: 'numeric', month: 'short' }) + '</button>' : '');
+        hint.style.display = 'flex';
+    },
+
+    useNextWorkingDay(dateStr) {
+        const input = document.getElementById('taskDueDate');
+        if (input) input.value = dateStr;
+        this.checkDueHoliday();
+    },
+
+    /* ---------- LOCAL STORAGE HEADROOM ---------- */
+    STORAGE_LIMIT: 5 * 1024 * 1024,
+
+    checkStorageHeadroom(bytes) {
+        const used = bytes / this.STORAGE_LIMIT;
+        if (used < 0.8) { this._quotaWarned = false; return; }
+        if (this._quotaWarned) return;
+        this._quotaWarned = true;
+        this.showToast('Local storage is about ' + Math.round(used * 100) +
+            '% full — export a CSV backup and empty the Bin.', 'warning');
+    },
+
+
+    /* ---------- BULK SELECT ---------- */
+    selectMode: false,
+    selected: [],
+
+    isSelected(id) { return this.selected.indexOf(String(id)) !== -1; },
+
+    toggleSelectMode() {
+        this.selectMode = !this.selectMode;
+        this.selected = [];
+        document.body.classList.toggle('selecting', this.selectMode);
+        document.querySelectorAll('.select-toggle').forEach(b => b.classList.toggle('is-on', this.selectMode));
+        this.renderTable();
+        this.updateSelectBar();
+        if (this.selectMode) this.showToast('Tap entries to select them.', 'info');
+    },
+
+    exitSelectMode() {
+        if (!this.selectMode) return;
+        this.selectMode = false;
+        this.selected = [];
+        document.body.classList.remove('selecting');
+        document.querySelectorAll('.select-toggle').forEach(b => b.classList.remove('is-on'));
+        this.updateSelectBar();
+    },
+
+    toggleSelect(id) {
+        const key = String(id);
+        const at = this.selected.indexOf(key);
+        if (at === -1) this.selected.push(key); else this.selected.splice(at, 1);
+        this.renderTable();
+        this.updateSelectBar();
+    },
+
+    updateSelectBar() {
+        const bar = document.getElementById('bulkBar');
+        if (!bar) return;
+
+        bar.classList.toggle('open', this.selectMode);
+        if (!this.selectMode) return;
+
+        const n = this.selected.length;
+        document.getElementById('bulkCount').textContent = n + ' selected';
+
+        const tab = this.currentTab;
+        const show = (elId, on) => {
+            const el = document.getElementById(elId);
+            if (el) el.style.display = (on && n > 0) ? '' : 'none';
+        };
+        show('bulkDone', tab === 'Register');
+        show('bulkReopen', tab === 'Completed');
+        show('bulkBin', tab === 'Register' || tab === 'Completed');
+        show('bulkRestore', tab === 'Bin');
+    },
+
+    bulkAction(kind) {
+        const ids = this.selected.slice();
+        if (!ids.length) { this.showToast('Nothing selected.', 'info'); return; }
+
+        const todayStr = this.getLocalDateStr(new Date());
+        const pending = this.lists.statuses.indexOf('Pending') !== -1 ? 'Pending' : (this.lists.statuses[0] || 'Pending');
+        const spawned = [];
+        let n = 0;
+
+        ids.forEach(id => {
+            const t = this.findTask(id);
+            if (!t) return;
+
+            if (kind === 'done') {
+                t.status = 'Completed';
+                t.completedDate = todayStr;
+                t.lastAckDate = null; t.snoozeUntil = null;
+                t.updatedAt = Date.now();
+                const repeat = this.nextOccurrence(t);
+                if (repeat) { if (!t.seriesId) t.seriesId = repeat.seriesId; spawned.push(repeat); }
+            } else if (kind === 'reopen') {
+                t.status = pending;
+                t.completedDate = null; t.lastAckDate = null; t.snoozeUntil = null;
+                t.updatedAt = Date.now();
+            } else if (kind === 'bin') {
+                t.deleted = true;
+                t.dateDeleted = todayStr;
+                t.updatedAt = Date.now();
+            } else if (kind === 'restore') {
+                t.deleted = false;
+                t.dateDeleted = null;
+                t.updatedAt = Date.now();
+            } else {
+                return;
+            }
+            n++;
+        });
+
+        spawned.forEach(s => this.tasks.push(s));
+        this.exitSelectMode();
+
+        this.saveData();
+        this.renderTable();
+        this.processEngine();
+
+        const verb = { done: 'completed', reopen: 'reopened', bin: 'moved to the Bin', restore: 'restored' }[kind];
+        this.showToast(n + ' ' + (n === 1 ? 'entry' : 'entries') + ' ' + verb + '.', 'success');
+        this.syncToGoogleSheets();
+    },
+
     /* ---------- BACKUP ---------- */
     exportData(format, silent = false) {
         if (format !== 'csv') return;
         const headers = ['id', 'dateLogged', 'description', 'category', 'priority', 'status', 'pendingWith',
-            'dueDate', 'dueTime', 'mailChain', 'notes', 'recurrence', 'deleted', 'lastAckDate',
-            'snoozeUntil', 'completedDate', 'emailId', 'updatedAt', 'purged', 'seriesId'];
+            'dueDate', 'dueTime', 'mailChain', 'notes', 'recurrence', 'deleted', 'dateDeleted',
+            'lastAckDate', 'snoozeUntil', 'completedDate', 'emailId', 'updatedAt', 'purged', 'seriesId'];
         const rows = [headers.join(',')];
 
         this.tasks.forEach(t => {
@@ -2488,17 +2842,35 @@ const app = {
 
     printRegister() { window.print(); },
 
-    showToast(msg, type = 'info') {
+    showToast(msg, type = 'info', action = null) {
         const container = document.getElementById('toastContainer');
+        if (!container) return;
+
         const toast = document.createElement('div');
         toast.className = `toast ${type}`;
-        toast.textContent = msg;
+
+        const label = document.createElement('span');
+        label.textContent = msg;
+        toast.appendChild(label);
+
+        let life = 3000;
+        if (action && action.label && typeof action.onClick === 'function') {
+            life = 6500;
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'toast-action';
+            btn.textContent = action.label;
+            btn.addEventListener('click', () => { toast.remove(); action.onClick(); });
+            toast.appendChild(btn);
+        }
+
         container.appendChild(toast);
         setTimeout(() => {
+            if (!toast.isConnected) return;
             toast.style.transform = 'translateY(-14px)';
             toast.style.opacity = '0';
             setTimeout(() => toast.remove(), 350);
-        }, 3000);
+        }, life);
     }
 };
 

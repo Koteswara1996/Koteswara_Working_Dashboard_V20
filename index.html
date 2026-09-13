@@ -13,6 +13,17 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <title>Banking Work Tracker — Web Application Dashboard</title>
+    <script>
+        /* Paint in the saved theme before the first frame, so neither the boot
+           screen nor the app flashes Pearl on the way to your chosen theme. */
+        (function () {
+            try {
+                var t = localStorage.getItem('pureEnergyTheme');
+                if (t) document.documentElement.setAttribute('data-theme', t);
+            } catch (e) {}
+            window.__bootAt = Date.now();
+        })();
+    </script>
     <style>
         /* =========================================================
            Banking Work Tracker — iOS Glassy Finish UI
@@ -449,7 +460,44 @@
             /* table-container itself gets blur from the global rule above */
         }
 
-        table { width: 100%; min-width: 880px; border-collapse: collapse; text-align: left; }
+        /* Fixed layout + explicit column widths. Without this the browser's auto
+           algorithm collapses the Task column to a couple of characters wide
+           and every word wraps onto its own line. */
+        table { width: 100%; border-collapse: collapse; text-align: left; table-layout: fixed; }
+
+        #registerTable  { min-width: 1060px; }
+        #completedTable { min-width: 820px; }
+        #binTable       { min-width: 700px; }
+        #holidaysTable  { min-width: 700px; }
+
+        /* Register: Logged | Task | Category | Priority | Status | Pending | Due | Actions */
+        #registerColgroup col:nth-child(1) { width: 96px; }
+        #registerColgroup col:nth-child(2) { width: auto; }
+        #registerColgroup col:nth-child(3) { width: 148px; }
+        #registerColgroup col:nth-child(4) { width: 112px; }
+        #registerColgroup col:nth-child(5) { width: 136px; }
+        #registerColgroup col:nth-child(6) { width: 132px; }
+        #registerColgroup col:nth-child(7) { width: 150px; }
+        #registerColgroup col:nth-child(8) { width: 116px; }
+
+        /* Completed: Logged | Task | Category | Completed on | Actions */
+        #completedColgroup col:nth-child(1) { width: 112px; }
+        #completedColgroup col:nth-child(2) { width: auto; }
+        #completedColgroup col:nth-child(3) { width: 160px; }
+        #completedColgroup col:nth-child(4) { width: 136px; }
+        #completedColgroup col:nth-child(5) { width: 116px; }
+
+        /* Bin: Deleted | Task | Category | Actions */
+        #binColgroup col:nth-child(1) { width: 120px; }
+        #binColgroup col:nth-child(2) { width: auto; }
+        #binColgroup col:nth-child(3) { width: 160px; }
+        #binColgroup col:nth-child(4) { width: 116px; }
+
+        /* Holidays: Date | Holiday for | Next working day | Type */
+        #holidaysColgroup col:nth-child(1) { width: 130px; }
+        #holidaysColgroup col:nth-child(2) { width: auto; }
+        #holidaysColgroup col:nth-child(3) { width: 160px; }
+        #holidaysColgroup col:nth-child(4) { width: 180px; }
         
         /* ── THEAD — the sticky, opaque, non-overrideable header ── */
         thead {
@@ -484,17 +532,30 @@
         /* ── TBODY rows ─────────────────────────────────────────── */
         td { 
             background: var(--glass-bg); 
-            padding: 14px 16px; 
-            font-size: 0.88rem; vertical-align: top; line-height: 1.45;
+            padding: 13px 16px; 
+            font-size: 0.86rem; vertical-align: middle; line-height: 1.45;
             border-bottom: 1px solid var(--line);
             transition: background 0.15s var(--ease);
         }
         tbody tr:last-child td { border-bottom: none; }
         tbody tr:hover td { background: var(--glass-bg-hover); }
-        
-        .td-task { max-width: 34vw; font-weight: 600; color: var(--label); line-height: 1.4; overflow-wrap: anywhere; }
-        .td-task .mailchain span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+        /* Single-line cells get a clean ellipsis instead of wrapping to a
+           one-word-per-line column. Full text is on the title attribute. */
+        .td-clip { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .td-clip .dot-priority { flex: 0 0 auto; }
+
+        .td-task { vertical-align: top; font-weight: 600; color: var(--label); line-height: 1.4; overflow-wrap: break-word; }
+        .td-task .task-line {
+            display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+            overflow: hidden; word-break: normal;
+        }
+        .td-task .mailchain span {
+            flex: 1 1 auto; min-width: 0;
+            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+        }
         .due-text { white-space: nowrap; font-weight: 600; font-family: var(--font-num); }
+        .td-empty { color: var(--label-3); }
 
         .col-resize { position: absolute; top: 0; right: 0; width: 6px; bottom: 0; cursor: col-resize; transition: background 0.15s; }
         .col-resize:hover, .col-resize.active { background: var(--accent); }
@@ -507,6 +568,7 @@
         .status-pill {
             display: inline-flex; align-items: center; padding: 4px 12px; font-size: 0.72rem; font-weight: 700;
             border-radius: 20px; border: 1px solid transparent; letter-spacing: 0.02em;
+            white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis;
         }
         .status-pill.Completed  { color: var(--green-ink); background: rgba(52,199,89,0.12); border-color: rgba(52,199,89,0.25); }
         .status-pill.Pending    { color: var(--amber-ink); background: rgba(255,149,0,0.10); border-color: rgba(255,149,0,0.22); }
@@ -532,9 +594,17 @@
         .btn-icon.bad:hover  { color: var(--red-ink);   border-color: rgba(255,59,48,0.3);   background: rgba(255,59,48,0.08); }
 
         .rec-badge { display: inline-block; margin-left: 8px; padding: 2px 8px; font-size: 0.75rem; font-weight: 700; color: var(--violet-ink); background: rgba(175,82,222,0.10); border-radius: 10px; }
-        .mailchain { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 0.85rem; color: var(--blue-ink); font-weight: 500; }
-        .btn-copy { padding: 2px 8px; font-size: 0.75rem; font-weight: 700; color: var(--blue-ink); background: rgba(0,122,255,0.08); border: 1px solid rgba(0,122,255,0.18); border-radius: 6px; cursor: pointer; }
-        .btn-copy.done { color: var(--green-ink); background: rgba(52,199,89,0.12); border-color: var(--green); }
+        .mailchain { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 0.82rem; color: var(--blue-ink); font-weight: 500; }
+        .btn-copy {
+            flex: 0 0 auto; display: inline-grid; place-items: center;
+            width: 26px; height: 26px; padding: 0; border-radius: 8px;
+            color: var(--blue-ink); background: rgba(0,122,255,0.08);
+            border: 1px solid rgba(0,122,255,0.18); cursor: pointer;
+            transition: all 0.15s var(--ease);
+        }
+        .btn-copy:hover { background: rgba(0,122,255,0.16); }
+        .btn-copy svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+        .btn-copy.done { color: var(--green-ink); background: rgba(52,199,89,0.14); border-color: var(--green); }
         .due-flag { color: var(--red-ink); font-weight: 800; }
         .due-time { font-weight: 600; color: var(--label-2); }
 
@@ -567,7 +637,9 @@
         }
         .chip.cat  { color: var(--blue-ink);   background: rgba(0,122,255,0.07);   border-color: rgba(0,122,255,0.15); }
         .chip.rec  { color: var(--violet-ink); background: rgba(175,82,222,0.07);  border-color: rgba(175,82,222,0.15); }
-        .chip.mail { color: var(--blue-ink); cursor: pointer; }
+        .chip.mail { color: var(--blue-ink); cursor: pointer; max-width: 100%; min-width: 0; }
+        .chip.mail svg { flex: 0 0 auto; width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2; }
+        .chip .chip-txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
         .tcard-foot {
             display: flex; align-items: center; justify-content: space-between; gap: 12px;
@@ -703,11 +775,92 @@
         body > .content-area > * { max-width: none; margin-left: 0; margin-right: 0; }
         body > #dashboardTab { padding: 24px var(--gutter) 48px; }
 
+        /* ── TABLE / CARD VIEW SWITCH ────────────────────────────── */
+        /* These win over the width-based media queries below, so the choice
+           works on a phone asking for the desktop site and on a narrow
+           desktop window alike. */
+        body[data-view="cards"] .card-list { display: flex !important; }
+        body[data-view="cards"] .table-wrap:not(.always) { display: none !important; }
+        body[data-view="table"] .card-list { display: none !important; }
+        body[data-view="table"] .table-wrap { display: block !important; }
+
+        .view-toggle { font-size: 0.95rem; line-height: 1; }
+
+        /* ── SWIPE ACTIONS ON CARDS ──────────────────────────────── */
+        .card-list .tcard { touch-action: pan-y; will-change: transform; }
+        .tcard.swipe-done { border-color: var(--green); box-shadow: 0 0 0 2px rgba(52,199,89,0.22); }
+        .tcard.swipe-bin  { border-color: var(--red);   box-shadow: 0 0 0 2px rgba(255,59,48,0.22); }
+        .swipe-hint { margin: 0 0 10px; font-size: 0.78rem; font-weight: 600; color: var(--label-3); text-align: center; }
+        body[data-view="table"] .swipe-hint { display: none; }
+        @media (hover: hover) and (pointer: fine) { .swipe-hint { display: none; } }
+
+        /* ── TOAST ACTION (undo) ─────────────────────────────────── */
+        .toast { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+        .toast-action {
+            flex: 0 0 auto; padding: 5px 12px; border-radius: 10px; cursor: pointer;
+            font-size: 0.78rem; font-weight: 800; letter-spacing: 0.02em;
+            color: var(--accent); background: rgba(0,122,255,0.10);
+            border: 1px solid rgba(0,122,255,0.26);
+        }
+        .toast-action:hover { background: rgba(0,122,255,0.2); }
+
+        /* ── BANK-HOLIDAY HINT ON THE DUE DATE ───────────────────── */
+        .due-hint {
+            display: none; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 10px;
+            padding: 10px 12px; border-radius: 12px; font-size: 0.82rem; font-weight: 600;
+            color: var(--amber-ink); background: rgba(255,149,0,0.10); border: 1px solid rgba(255,149,0,0.24);
+        }
+        .due-hint button {
+            padding: 5px 11px; border-radius: 9px; cursor: pointer; font-size: 0.78rem; font-weight: 800;
+            color: var(--blue-ink); background: rgba(0,122,255,0.10); border: 1px solid rgba(0,122,255,0.24);
+        }
+
+        /* ── BULK SELECT ─────────────────────────────────────────── */
+        body.selecting tbody tr[data-record-id] td,
+        body.selecting .card-list .tcard[data-record-id] { cursor: pointer; }
+        tr.is-selected td { background: rgba(0,122,255,0.13) !important; }
+        .tcard.is-selected { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(0,122,255,0.26); }
+        body.selecting .card-list .tcard[data-record-id]::after {
+            content: ''; position: absolute; right: 16px; top: 16px; width: 20px; height: 20px;
+            border-radius: 50%; border: 2px solid var(--line-strong); background: var(--input-bg);
+        }
+        body.selecting .card-list .tcard.is-selected::after {
+            background: var(--accent); border-color: var(--accent);
+            box-shadow: inset 0 0 0 3px var(--input-bg);
+        }
+        .btn-icon.is-on { color: #fff; background: var(--accent); border-color: var(--accent); }
+
+        #bulkBar {
+            display: none; position: fixed; z-index: 950;
+            left: 50%; transform: translateX(-50%);
+            bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+            align-items: center; gap: 10px; padding: 10px 12px 10px 18px;
+            border-radius: 22px; max-width: calc(100vw - 24px); flex-wrap: wrap;
+            background: var(--glass-header-bg); border: 1px solid var(--glass-border);
+            box-shadow: 0 20px 48px rgba(0,0,0,0.18), var(--glass-inset);
+            backdrop-filter: saturate(180%) blur(28px); -webkit-backdrop-filter: saturate(180%) blur(28px);
+        }
+        #bulkBar.open { display: flex; }
+        #bulkCount { font-size: 0.86rem; font-weight: 800; color: var(--label); white-space: nowrap; }
+        #bulkBar button {
+            padding: 8px 14px; border-radius: 13px; cursor: pointer; white-space: nowrap;
+            font-size: 0.82rem; font-weight: 700; border: 1px solid var(--line-strong);
+            background: var(--glass-bg); color: var(--label);
+        }
+        #bulkBar button.ok   { color: var(--green-ink); border-color: rgba(52,199,89,0.3);  background: rgba(52,199,89,0.12); }
+        #bulkBar button.bad  { color: var(--red-ink);   border-color: rgba(255,59,48,0.3);  background: rgba(255,59,48,0.10); }
+        #bulkBar button.warn { color: var(--amber-ink); border-color: rgba(255,149,0,0.3);  background: rgba(255,149,0,0.10); }
+
+        @media (max-width: 768px) {
+            #bulkBar { bottom: calc(var(--tabbar-h) + 26px + env(safe-area-inset-bottom, 0px)); }
+        }
+
         /* ── MOBILE BREAKPOINTS ──────────────────────────────────── */
         @media (min-width: 769px) { .card-list { display: none; } }
 
         @media (max-width: 768px) {
-            .table-wrap { display: none; }
+            .table-wrap:not(.always) { display: none; }
+            .table-wrap.always .table-container { max-height: 62vh; }
             .appbar { padding: 0 16px; }
             .appbar-title { font-size: 1.05rem; }
             
@@ -747,7 +900,99 @@
             .btn-modal { width: 100%; }
 
             #toastContainer { top: calc(var(--appbar-h) + 10px); bottom: auto; width: calc(100vw - 24px); align-items: stretch; }
-            .toast { text-align: center; min-width: 0; }
+            .toast { text-align: center; min-width: 0; justify-content: center; }
+        }
+
+        /* ── BOOT SPLASH ─────────────────────────────────────────── */
+        .boot {
+            position: fixed; inset: 0; z-index: 99999;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 22px; background: var(--canvas-bg); background-attachment: fixed;
+            padding: env(safe-area-inset-top, 0px) 24px env(safe-area-inset-bottom, 0px);
+            transition: opacity 0.55s var(--ease), transform 0.55s var(--ease), visibility 0s linear 0.55s;
+        }
+        .boot.gone { opacity: 0; transform: scale(1.08); visibility: hidden; pointer-events: none; }
+
+        .boot-tile {
+            width: 116px; height: 116px;
+            filter: drop-shadow(0 18px 38px rgba(13, 148, 136, 0.34));
+            animation: bootPop 0.78s var(--ease-spring) both;
+        }
+        .boot-tile svg { width: 100%; height: 100%; display: block; }
+
+        .boot-ring {
+            stroke-dasharray: 189; stroke-dashoffset: 189;
+            animation: bootDraw 1.05s var(--ease) 0.2s forwards;
+        }
+        .boot-tick {
+            stroke-dasharray: 46; stroke-dashoffset: 46;
+            animation: bootDraw 0.42s var(--ease) 0.82s forwards;
+        }
+        .boot-glow {
+            transform-origin: 50px 50px;
+            animation: bootHalo 1.9s var(--ease) 0.9s infinite;
+        }
+
+        .boot-name {
+            font-size: 1.12rem; font-weight: 800; letter-spacing: -0.02em; color: var(--label);
+            text-align: center; animation: bootRise 0.6s var(--ease) 0.42s both;
+        }
+        .boot-sub {
+            margin-top: -14px; font-size: 0.82rem; font-weight: 600; color: var(--label-2);
+            animation: bootRise 0.6s var(--ease) 0.56s both;
+        }
+        .boot-bar {
+            width: 128px; height: 4px; border-radius: 2px; overflow: hidden;
+            background: var(--fill-2); animation: bootRise 0.6s var(--ease) 0.7s both;
+        }
+        .boot-bar i {
+            display: block; width: 42%; height: 100%; border-radius: 2px;
+            background: linear-gradient(90deg, #2dd4bf, #0d9488);
+            animation: bootSlide 1.15s var(--ease) infinite;
+        }
+
+        @keyframes bootPop {
+            0%   { opacity: 0; transform: scale(0.55) rotate(-9deg); }
+            60%  { opacity: 1; }
+            100% { opacity: 1; transform: scale(1) rotate(0deg); }
+        }
+        @keyframes bootDraw { to { stroke-dashoffset: 0; } }
+        @keyframes bootHalo {
+            0%   { opacity: 0.42; transform: scale(1); }
+            55%  { opacity: 0; transform: scale(1.35); }
+            100% { opacity: 0; transform: scale(1.35); }
+        }
+        @keyframes bootRise {
+            from { opacity: 0; transform: translateY(12px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes bootSlide {
+            0%   { transform: translateX(-110%); }
+            100% { transform: translateX(245%); }
+        }
+
+        /* The shell arriving behind the splash */
+        body.booted .appbar { animation: shellDrop 0.5s var(--ease) both; }
+        body.booted .tabbar { animation: shellRise 0.5s var(--ease) 0.06s both; }
+        body.booted .content-area.active { animation: shellFade 0.55s var(--ease) 0.1s both; }
+        body.booted #appMark { animation: markPulse 0.9s var(--ease-spring) 0.18s both; }
+
+        @keyframes shellDrop { from { opacity: 0; transform: translateY(-14px); } to { opacity: 1; transform: none; } }
+        @keyframes shellRise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+        @keyframes shellFade { from { opacity: 0; transform: translateY(10px) scale(0.995); } to { opacity: 1; transform: none; } }
+        @keyframes markPulse {
+            0%   { transform: scale(0.6); opacity: 0; }
+            55%  { transform: scale(1.14); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .boot-tile, .boot-name, .boot-sub, .boot-bar, .boot-bar i, .boot-glow,
+            body.booted .appbar, body.booted .tabbar,
+            body.booted .content-area.active, body.booted #appMark { animation: none !important; }
+            .boot-ring, .boot-tick { stroke-dashoffset: 0; animation: none !important; }
+            .boot { transition: opacity 0.2s linear, visibility 0s linear 0.2s; }
+            .boot.gone { transform: none; }
         }
 
         /* ── PRINT ───────────────────────────────────────────────── */
@@ -763,6 +1008,42 @@
     </style>
 </head>
 <body>
+
+    <!-- Boot splash -->
+    <div class="boot" id="bootSplash" role="status" aria-label="Loading Banking Work Tracker">
+        <div class="boot-tile">
+            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <defs>
+                    <linearGradient id="bootGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0" stop-color="#2dd4bf"/>
+                        <stop offset="1" stop-color="#0d9488"/>
+                    </linearGradient>
+                </defs>
+                <rect width="100" height="100" rx="23" fill="url(#bootGrad)"/>
+                <circle class="boot-glow" cx="50" cy="50" r="30" fill="none" stroke="#fff" stroke-width="4"/>
+                <circle cx="50" cy="50" r="30" fill="none" stroke="#fff" stroke-opacity="0.30" stroke-width="8"/>
+                <circle class="boot-ring" cx="50" cy="50" r="30" fill="none" stroke="#fff" stroke-width="8"
+                        stroke-linecap="round" transform="rotate(-90 50 50)"/>
+                <path class="boot-tick" d="M36 51l10 10 20-22" fill="none" stroke="#fff" stroke-width="7"
+                      stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </div>
+        <div class="boot-name">Banking Work Tracker</div>
+        <div class="boot-sub">PUR Energy</div>
+        <div class="boot-bar"><i></i></div>
+    </div>
+
+    <script>
+        /* Safety net: if the app script ever fails to load, don't leave the
+           boot screen stuck over the page. */
+        setTimeout(function () {
+            var el = document.getElementById('bootSplash');
+            if (el && !el.classList.contains('gone')) {
+                el.classList.add('gone');
+                document.body.classList.add('booted');
+            }
+        }, 5000);
+    </script>
 
     <!-- Header -->
     <header class="appbar" id="mainAppHeader" style="display:none;">
@@ -852,6 +1133,8 @@
             </div>
 
             <div class="toolbar-actions">
+                <button class="btn-icon select-toggle" onclick="app.toggleSelectMode()" title="Select several entries">☑</button>
+                <button class="btn-icon view-toggle" onclick="app.toggleViewMode()" title="Switch between table and cards">▦</button>
                 <button class="btn-icon" onclick="app.clearFilters()" title="Clear Filters">🚫</button>
                 <button class="btn-icon" id="sortToggleRegister" onclick="app.openSortMenu('Register', this)" title="Sort">🔃</button>
                 <button class="btn-icon" onclick="app.fitColumns('register')" title="Fit Columns">⤢</button>
@@ -865,6 +1148,7 @@
             <span id="entriesShownText">0 entries shown</span>
         </div>
 
+        <p class="swipe-hint">Swipe a card right to complete, left to bin · tap to edit</p>
         <div class="card-list" id="taskCardList"></div>
 
         <div class="table-wrap">
@@ -902,7 +1186,7 @@
             </div>
         </div>
 
-        <div class="table-wrap">
+        <div class="table-wrap always">
             <div class="table-container">
                 <table id="holidaysTable">
                     <colgroup id="holidaysColgroup"><col><col><col><col></colgroup>
@@ -933,6 +1217,8 @@
             </div>
 
             <div class="toolbar-actions">
+                <button class="btn-icon select-toggle" onclick="app.toggleSelectMode()" title="Select several entries">☑</button>
+                <button class="btn-icon view-toggle" onclick="app.toggleViewMode()" title="Switch between table and cards">▦</button>
                 <button class="btn-icon" id="sortToggleCompleted" onclick="app.openSortMenu('Completed', this)" title="Sort">🔃</button>
                 <button class="btn-icon" onclick="app.fitColumns('completed')" title="Fit Columns">⤢</button>
             </div>
@@ -942,6 +1228,7 @@
             <span id="entriesCompletedText">0 completed entries</span>
         </div>
 
+        <p class="swipe-hint">Tap a card to edit</p>
         <div class="card-list" id="completedCardList"></div>
 
         <div class="table-wrap">
@@ -961,6 +1248,8 @@
     <div class="content-area" id="binTab">
         <div class="toolbar-row single-line-toolbar" id="binToolbar">
             <div class="toolbar-actions" style="margin-left: 0;">
+                <button class="btn-icon select-toggle" onclick="app.toggleSelectMode()" title="Select several entries">☑</button>
+                <button class="btn-icon view-toggle" onclick="app.toggleViewMode()" title="Switch between table and cards">▦</button>
                 <button class="btn-icon" id="sortToggleBin" onclick="app.openSortMenu('Bin', this)" title="Sort">🔃</button>
                 <button class="btn-icon" onclick="app.fitColumns('bin')" title="Fit Columns">⤢</button>
             </div>
@@ -970,6 +1259,7 @@
             <span id="entriesBinText">0 entries in bin</span>
         </div>
 
+        <p class="swipe-hint">Use the buttons to restore or delete</p>
         <div class="card-list" id="binCardList"></div>
 
         <div class="table-wrap">
@@ -1077,9 +1367,10 @@
                 <div class="form-group">
                     <label style="color:var(--accent);">Due Date & Time</label>
                     <div style="display:flex; gap:12px;">
-                        <input type="date" id="taskDueDate">
+                        <input type="date" id="taskDueDate" onchange="app.checkDueHoliday()">
                         <input type="time" id="taskDueTime">
                     </div>
+                    <div class="due-hint" id="dueHolidayHint"></div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
@@ -1185,6 +1476,15 @@
     <div class="ms-options" id="sortMenuPanel" style="position:fixed; z-index:900;"></div>
 
     <input type="file" id="importCSVFile" style="display:none;" accept=".csv" onchange="app.importCSV(event)">
+    <div id="bulkBar">
+        <span id="bulkCount">0 selected</span>
+        <button type="button" class="ok"   id="bulkDone"    onclick="app.bulkAction('done')">Complete</button>
+        <button type="button" class="warn" id="bulkReopen"  onclick="app.bulkAction('reopen')">Reopen</button>
+        <button type="button" class="bad"  id="bulkBin"     onclick="app.bulkAction('bin')">Move to Bin</button>
+        <button type="button" class="ok"   id="bulkRestore" onclick="app.bulkAction('restore')">Restore</button>
+        <button type="button" onclick="app.toggleSelectMode()">Cancel</button>
+    </div>
+
     <div id="toastContainer"></div>
 
     <script src="./app.js"></script>
