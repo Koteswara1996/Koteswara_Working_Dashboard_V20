@@ -22,6 +22,18 @@
                 if (t) document.documentElement.setAttribute('data-theme', t);
             } catch (e) {}
             window.__bootAt = Date.now();
+
+            /* Decide the shell before anything paints. A phone asking for the
+               desktop site fakes a ~980px viewport but still reports a coarse
+               pointer, so check both. app.js reuses this exact function. */
+            window.__shell = function () {
+                var w = window.innerWidth || document.documentElement.clientWidth || 1024;
+                var coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+                if (w <= 900) return 'mobile';
+                if (coarse && w <= 1180) return 'mobile';
+                return 'desktop';
+            };
+            document.documentElement.setAttribute('data-shell', window.__shell());
         })();
     </script>
     <style>
@@ -854,9 +866,7 @@
         #bulkBar button.bad  { color: var(--red-ink);   border-color: rgba(255,59,48,0.3);  background: rgba(255,59,48,0.10); }
         #bulkBar button.warn { color: var(--amber-ink); border-color: rgba(255,149,0,0.3);  background: rgba(255,149,0,0.10); }
 
-        @media (max-width: 768px) {
-            #bulkBar { bottom: calc(var(--tabbar-h) + 26px + env(safe-area-inset-bottom, 0px)); }
-        }
+        html[data-shell="mobile"] #bulkBar { bottom: calc(var(--tabbar-h) + 26px + env(safe-area-inset-bottom, 0px)); }
 
         /* ── COMPACT DASHBOARD TILES ─────────────────────────────── */
         .stat-grid {
@@ -921,87 +931,53 @@
             .mini-grid { grid-template-columns: repeat(2, 1fr); }
         }
 
-        /* ── MOBILE SHELL (also when a phone forces the desktop site) ──
-           resolvedView() spots a coarse pointer, so these fire on a phone
-           reporting a 980px viewport where the width query never would. */
-        body[data-view="cards"] .appbar { padding: 0 16px; }
-        body[data-view="cards"] .appbar-title { font-size: 1.05rem; }
-        body[data-view="cards"] .tabbar {
-            order: 0; position: fixed; left: 16px; right: 16px;
-            bottom: calc(16px + env(safe-area-inset-bottom, 0px));
-            z-index: 90; margin: 0; height: var(--tabbar-h); padding: 6px;
-            background: var(--glass-header-bg);
-            border: 1px solid var(--glass-border);
-            border-radius: 26px;
-            box-shadow: 0 20px 48px rgba(0,0,0,0.14), var(--glass-inset);
+        /* The card list and table are switched by body[data-view] above. */
+        .card-list { display: none; }
+
+        /* ── MOBILE SHELL ─────────────────────────────────────────
+           Tabs move to a floating bar at the bottom, panels become
+           sheets, toasts drop to the top. Switched on by the
+           data-shell attribute, which app.js sets from the device
+           (width plus pointer type), so this is independent of the
+           table/card toggle and survives "desktop site" mode. */
+        @keyframes sheetSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        html[data-shell="mobile"] .table-wrap:not(.always) { display: none; }
+        html[data-shell="mobile"] .table-wrap.always .table-container { max-height: 62vh; }
+        html[data-shell="mobile"] .appbar { padding: 0 16px; }
+        html[data-shell="mobile"] .appbar-title { font-size: 1.05rem; }
+        html[data-shell="mobile"] .tabbar {
+        order: 0; position: fixed; left: 16px; right: 16px;
+        bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+        z-index: 90; margin: 0; height: var(--tabbar-h); padding: 6px;
+        background: var(--glass-header-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: 26px;
+        box-shadow: 0 20px 48px rgba(0,0,0,0.14), var(--glass-inset);
         }
-        body[data-view="cards"] .tabbar-btn { flex: 1 1 0; flex-direction: column; gap: 4px; height: 100%; padding: 4px 2px; font-size: 0.7rem; border-radius: 18px; }
-        body[data-view="cards"] .tabbar-btn.active { background: var(--fill); box-shadow: none; }
-        body[data-view="cards"] .tabbar-ico { display: block; width: 24px; height: 24px; }
-        body[data-view="cards"] .tabbar-ico svg { width: 100%; height: 100%; stroke-width: 2; }
-        body[data-view="cards"] .tabbar-lbl { font-size: 0.7rem; font-weight: 600; line-height: 1; }
-        body[data-view="cards"] .tabbar-btn .badge { position: absolute; top: 4px; right: 50%; transform: translateX(18px); min-width: 18px; height: 18px; font-size: 0.65rem; padding: 0 5px; }
-        body[data-view="cards"] .content-area,
-        body[data-view="cards"] #registerTab, body[data-view="cards"] #completedTab,
-        body[data-view="cards"] #binTab, body[data-view="cards"] #holidaysTab,
-        body[data-view="cards"] > #dashboardTab {
-            padding: 16px 16px calc(var(--tabbar-h) + 48px + env(safe-area-inset-bottom, 0px));
-        }
-        body[data-view="cards"] #registerTab, body[data-view="cards"] #completedTab,
-        body[data-view="cards"] #binTab, body[data-view="cards"] #holidaysTab,
-        body[data-view="cards"] > #dashboardTab { --gutter: 16px; }
-        body[data-view="cards"] #bulkBar { bottom: calc(var(--tabbar-h) + 26px + env(safe-area-inset-bottom, 0px)); }
-        body[data-view="cards"] #toastContainer { top: calc(var(--appbar-h) + 10px); bottom: auto; width: calc(100vw - 24px); align-items: stretch; }
-        body[data-view="cards"] .dash-controls .filter-select { flex: 1 1 100%; }
-        body[data-view="cards"] .dash-controls > span { margin-left: 0; }
+        html[data-shell="mobile"] .tabbar-btn { flex: 1 1 0; flex-direction: column; gap: 4px; height: 100%; padding: 4px 2px; font-size: 0.7rem; border-radius: 18px; }
+        html[data-shell="mobile"] .tabbar-btn.active { background: var(--fill); box-shadow: none; }
+        html[data-shell="mobile"] .tabbar-ico { display: block; width: 24px; height: 24px; }
+        html[data-shell="mobile"] .tabbar-ico svg { width: 100%; height: 100%; stroke-width: 2; }
+        html[data-shell="mobile"] .tabbar-lbl { font-size: 0.7rem; font-weight: 600; line-height: 1; }
+        html[data-shell="mobile"] .tabbar-btn .badge { position: absolute; top: 4px; right: 50%; transform: translateX(18px); min-width: 18px; height: 18px; font-size: 0.65rem; padding: 0 5px; }
+        html[data-shell="mobile"] .content-area { padding: 16px 16px calc(var(--tabbar-h) + 48px + env(safe-area-inset-bottom, 0px)); }
+        html[data-shell="mobile"] #registerTab, html[data-shell="mobile"] #completedTab, html[data-shell="mobile"] #binTab, html[data-shell="mobile"] #holidaysTab { --gutter: 16px; padding: 16px 16px calc(var(--tabbar-h) + 48px + env(safe-area-inset-bottom, 0px)); }
+        html[data-shell="mobile"] body > #dashboardTab { --gutter: 16px; padding: 16px 16px calc(var(--tabbar-h) + 48px + env(safe-area-inset-bottom, 0px)); }
+        html[data-shell="mobile"] .dash-controls { gap: 10px; }
+        html[data-shell="mobile"] .dash-controls .filter-select { flex: 1 1 100%; }
+        html[data-shell="mobile"] .dash-controls > span { margin-left: 0; }
+        html[data-shell="mobile"] .toolbar-row { margin-top: -16px; }
+        html[data-shell="mobile"] .table-container { max-height: unset; }
+        html[data-shell="mobile"] .multi-select, html[data-shell="mobile"] .ms-header, html[data-shell="mobile"] .filter-select { width: 100%; max-width: 100%; }
+        html[data-shell="mobile"] .modal { align-items: flex-end; padding: 0; }
+        html[data-shell="mobile"] .modal-content { max-width: 100%; max-height: 85dvh; border-radius: 32px 32px 0 0; padding: 24px 24px calc(32px + env(safe-area-inset-bottom, 0px)); animation: sheetSlideUp 0.3s var(--ease-spring) both; }
+        html[data-shell="mobile"] .modal-header::before { content: ''; position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: 40px; height: 5px; border-radius: 4px; background: var(--line-strong); }
+        html[data-shell="mobile"] .form-row { grid-template-columns: 1fr; gap: 12px; }
+        html[data-shell="mobile"] .modal-buttons { flex-direction: column; }
+        html[data-shell="mobile"] .btn-modal { width: 100%; }
+        html[data-shell="mobile"] #toastContainer { top: calc(var(--appbar-h) + 10px); bottom: auto; width: calc(100vw - 24px); align-items: stretch; }
+        html[data-shell="mobile"] .toast { text-align: center; min-width: 0; justify-content: center; }
 
-        /* ── MOBILE BREAKPOINTS ──────────────────────────────────── */
-        @media (min-width: 769px) { .card-list { display: none; } }
-
-        @media (max-width: 768px) {
-            .table-wrap:not(.always) { display: none; }
-            .table-wrap.always .table-container { max-height: 62vh; }
-            .appbar { padding: 0 16px; }
-            .appbar-title { font-size: 1.05rem; }
-            
-            .tabbar {
-                order: 0; position: fixed; left: 16px; right: 16px;
-                bottom: calc(16px + env(safe-area-inset-bottom, 0px));
-                z-index: 90; margin: 0; height: var(--tabbar-h); padding: 6px;
-                background: var(--glass-header-bg);
-                border: 1px solid var(--glass-border);
-                border-radius: 26px;
-                box-shadow: 0 20px 48px rgba(0,0,0,0.14), var(--glass-inset);
-            }
-            .tabbar-btn { flex: 1 1 0; flex-direction: column; gap: 4px; height: 100%; padding: 4px 2px; font-size: 0.7rem; border-radius: 18px; }
-            .tabbar-btn.active { background: var(--fill); box-shadow: none; }
-            .tabbar-ico { display: block; width: 24px; height: 24px; }
-            .tabbar-ico svg { width: 100%; height: 100%; stroke-width: 2; }
-            .tabbar-lbl { font-size: 0.7rem; font-weight: 600; line-height: 1; }
-            .tabbar-btn .badge { position: absolute; top: 4px; right: 50%; transform: translateX(18px); min-width: 18px; height: 18px; font-size: 0.65rem; padding: 0 5px; }
-
-            .content-area { padding: 16px 16px calc(var(--tabbar-h) + 48px + env(safe-area-inset-bottom, 0px)); }
-            #registerTab, #completedTab, #binTab, #holidaysTab { --gutter: 16px; padding: 16px 16px calc(var(--tabbar-h) + 48px + env(safe-area-inset-bottom, 0px)); }
-            body > #dashboardTab { --gutter: 16px; padding: 16px 16px calc(var(--tabbar-h) + 48px + env(safe-area-inset-bottom, 0px)); }
-            .dash-controls { gap: 10px; }
-            .dash-controls .filter-select { flex: 1 1 100%; }
-            .dash-controls > span { margin-left: 0; }
-            .toolbar-row { margin-top: -16px; }
-            .table-container { max-height: unset; }
-            
-            .multi-select, .ms-header, .filter-select { width: 100%; max-width: 100%; }
-
-            .modal { align-items: flex-end; padding: 0; }
-            .modal-content { max-width: 100%; max-height: 85dvh; border-radius: 32px 32px 0 0; padding: 24px 24px calc(32px + env(safe-area-inset-bottom, 0px)); animation: sheetSlideUp 0.3s var(--ease-spring) both; }
-            @keyframes sheetSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-            .modal-header::before { content: ''; position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: 40px; height: 5px; border-radius: 4px; background: var(--line-strong); }
-            .form-row { grid-template-columns: 1fr; gap: 12px; }
-            .modal-buttons { flex-direction: column; }
-            .btn-modal { width: 100%; }
-
-            #toastContainer { top: calc(var(--appbar-h) + 10px); bottom: auto; width: calc(100vw - 24px); align-items: stretch; }
-            .toast { text-align: center; min-width: 0; justify-content: center; }
-        }
 
         /* ── BOOT SPLASH ─────────────────────────────────────────── */
         .boot {
@@ -1200,7 +1176,7 @@
             <select class="filter-select" id="dashGlobalCategory" onchange="app.renderDashboard()" style="min-width:220px;">
                 <option value="All">All Categories Overview</option>
             </select>
-            <span style="color:var(--label-2); font-size:0.9rem; font-weight:600;">Tap any card or bar to open it in Tasks</span>
+            <span style="color:var(--label-2); font-size:0.9rem; font-weight:600;">Tap any card to open it in Tasks</span>
         </div>
 
         <div class="greet" id="dashGreeting"></div>

@@ -2458,15 +2458,28 @@ const app = {
     VIEW_KEY: 'pureEnergyView',
     viewMode: 'auto',
 
+    /* Which shell to wear: 'mobile' puts the tabs in a floating bar at the
+       bottom, 'desktop' keeps them inline in the header. Decided by the device
+       alone — never by the table/card toggle, so you can read a table on a
+       phone and still get bottom tabs. */
+    resolvedShell() {
+        if (typeof window.__shell === 'function') return window.__shell();
+        const w = window.innerWidth || 1024;
+        const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+        if (w <= 900) return 'mobile';
+        if (coarse && w <= 1180) return 'mobile';
+        return 'desktop';
+    },
+
+    applyShell() {
+        const shell = this.resolvedShell();
+        document.documentElement.setAttribute('data-shell', shell);
+        return shell;
+    },
+
     resolvedView() {
         if (this.viewMode === 'cards' || this.viewMode === 'table') return this.viewMode;
-        const w = window.innerWidth || 1024;
-        // A phone with "Desktop site" switched on reports a ~980px viewport but
-        // still has a coarse pointer, so trust the pointer over the width.
-        const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
-        if (w <= 768) return 'cards';
-        if (coarse && w <= 1100) return 'cards';
-        return 'table';
+        return this.resolvedShell() === 'mobile' ? 'cards' : 'table';
     },
 
     applyViewMode() {
@@ -2491,17 +2504,21 @@ const app = {
     initViewMode() {
         const saved = localStorage.getItem(this.VIEW_KEY);
         this.viewMode = (saved === 'cards' || saved === 'table') ? saved : 'auto';
+        this.applyShell();
         this.applyViewMode();
 
         let t = null;
-        window.addEventListener('resize', () => {
-            if (this.viewMode !== 'auto') return;
+        const onResize = () => {
             clearTimeout(t);
             t = setTimeout(() => {
+                this.applyShell();
+                if (this.viewMode !== 'auto') return;
                 const before = document.body.dataset.view;
                 if (this.applyViewMode() !== before) this.renderTable();
             }, 180);
-        });
+        };
+        window.addEventListener('resize', onResize);
+        window.addEventListener('orientationchange', onResize);
     },
 
     /* ---------- SWIPE A CARD: RIGHT = DONE, LEFT = BIN ---------- */
